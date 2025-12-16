@@ -22,8 +22,8 @@ def home():
         "status": "running",
         "Owner": OWNER,
         "endpoints": {
-            "/vehicle-merge/<vehicle_no>": "RC + Vehicle + Challan merged raw response",
-            "/health": "Health check"
+            "/health": "Health check",
+            "/vehicle-merge/<vehicle_no>": "Merged raw response from RC, Vehicle & Challan APIs"
         }
     })
 
@@ -38,13 +38,15 @@ def vehicle_merge(vehicle_no):
     try:
         primary_url = f"https://anuj-rcc.vercel.app/rc?query={vehicle_no}"
         p = requests.get(primary_url, timeout=8)
-        if p.status_code == 200:
+
+        try:
             primary_response = p.json()
-        else:
+        except:
             primary_response = {
-                "error": "Primary API returned non-200",
-                "status_code": p.status_code
+                "raw_response": p.text,
+                "note": "Primary API did not return JSON"
             }
+
     except Exception as e:
         primary_response = {
             "error": "Primary API failed",
@@ -58,30 +60,37 @@ def vehicle_merge(vehicle_no):
             f"?reg={vehicle_no}&key=Tofficial"
         )
         s = requests.get(secondary_url, timeout=8)
-        if s.status_code == 200:
+
+        try:
             secondary_response = s.json()
-        else:
+        except:
             secondary_response = {
-                "error": "Secondary API returned non-200",
-                "status_code": s.status_code
+                "raw_response": s.text,
+                "note": "Secondary API did not return JSON"
             }
+
     except Exception as e:
         secondary_response = {
             "error": "Secondary API failed",
             "details": str(e)
         }
 
-    # -------- CHALLAN API (RAW COPY-PASTE) --------
+    # -------- CHALLAN API (Cloudflare Worker – USER PROVIDED) --------
     try:
-        challan_url = f"https://vahanx.in/challan-search/{vehicle_no}"
+        challan_url = (
+            "https://api.b77bf911.workers.dev/vehicle"
+            f"?registration={vehicle_no}"
+        )
         c = requests.get(challan_url, timeout=8)
-        if c.status_code == 200:
+
+        try:
             challan_response = c.json()
-        else:
+        except:
             challan_response = {
-                "error": "Challan API returned non-200",
-                "status_code": c.status_code
+                "raw_response": c.text,
+                "note": "Challan API did not return JSON"
             }
+
     except Exception as e:
         challan_response = {
             "error": "Challan API failed",
