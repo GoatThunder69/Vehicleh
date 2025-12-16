@@ -1,10 +1,17 @@
 from flask import Flask, jsonify
 import requests
+import time
 
 # ---------------- BASIC APP ----------------
 app = Flask(__name__)
 
 OWNER = "@GoatThunder"
+
+# ---------------- COMMON HEADERS ----------------
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "Accept": "application/json"
+}
 
 # ---------------- HEALTH CHECK ----------------
 @app.route("/health")
@@ -37,7 +44,7 @@ def vehicle_merge(vehicle_no):
     # -------- PRIMARY API (anuj-rcc) --------
     try:
         primary_url = f"https://anuj-rcc.vercel.app/rc?query={vehicle_no}"
-        p = requests.get(primary_url, timeout=8)
+        p = requests.get(primary_url, headers=HEADERS, timeout=8)
 
         try:
             primary_response = p.json()
@@ -59,7 +66,7 @@ def vehicle_merge(vehicle_no):
             "https://flipcartstore.serv00.net/vehicle/api.php"
             f"?reg={vehicle_no}&key=Tofficial"
         )
-        s = requests.get(secondary_url, timeout=8)
+        s = requests.get(secondary_url, headers=HEADERS, timeout=8)
 
         try:
             secondary_response = s.json()
@@ -81,7 +88,13 @@ def vehicle_merge(vehicle_no):
             "https://api.b77bf911.workers.dev/vehicle"
             f"?registration={vehicle_no}"
         )
-        c = requests.get(challan_url, timeout=8)
+
+        try:
+            c = requests.get(challan_url, headers=HEADERS, timeout=14)
+        except:
+            # retry once after short delay
+            time.sleep(2)
+            c = requests.get(challan_url, headers=HEADERS, timeout=14)
 
         try:
             challan_response = c.json()
