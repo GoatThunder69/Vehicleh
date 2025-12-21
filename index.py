@@ -1,19 +1,16 @@
 from flask import Flask, jsonify
 import requests
-import time
 
-# ---------------- BASIC APP ----------------
 app = Flask(__name__)
 
 OWNER = "@GoatThunder"
 
-# ---------------- COMMON HEADERS ----------------
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "User-Agent": "Mozilla/5.0",
     "Accept": "application/json"
 }
 
-# ---------------- HEALTH CHECK ----------------
+# ---------------- HEALTH ----------------
 @app.route("/health")
 def health():
     return jsonify({
@@ -25,99 +22,46 @@ def health():
 @app.route("/")
 def home():
     return jsonify({
-        "api": "Vehicle + Challan Merge API",
+        "api": "Vehicle Lookup API",
         "status": "running",
         "Owner": OWNER,
         "endpoints": {
-            "/health": "Health check",
-            "/vehicle-merge/<vehicle_no>": "Merged raw response from RC, Vehicle & Challan APIs"
+            "/vehicle/<reg_no>": "Get vehicle details by registration number",
+            "/health": "Health check"
         }
     })
 
-# ---------------- VEHICLE + CHALLAN MERGE API ----------------
-@app.route("/vehicle-merge/<vehicle_no>")
-def vehicle_merge(vehicle_no):
-    primary_response = None
-    secondary_response = None
-    challan_response = None
+# ---------------- VEHICLE LOOKUP ----------------
+@app.route("/vehicle/<reg_no>")
+def vehicle_lookup(reg_no):
+    vehicle_api_response = None
 
-    # -------- PRIMARY API (anuj-rcc) --------
     try:
-        primary_url = f"https://anuj-rcc.vercel.app/rc?query={vehicle_no}"
-        p = requests.get(primary_url, headers=HEADERS, timeout=8)
+        url = "https://botfiles.serv00.net/vehicle/api.php"
+        params = {
+            "key": "ThunderOfficial",
+            "reg": reg_no
+        }
+
+        r = requests.get(url, headers=HEADERS, params=params, timeout=14)
 
         try:
-            primary_response = p.json()
+            vehicle_api_response = r.json()
         except:
-            primary_response = {
-                "raw_response": p.text,
-                "note": "Primary API did not return JSON"
+            vehicle_api_response = {
+                "error": "Vehicle API did not return JSON",
+                "raw_response": r.text
             }
 
     except Exception as e:
-        primary_response = {
-            "error": "Primary API failed",
+        vehicle_api_response = {
+            "error": "Vehicle API failed",
             "details": str(e)
         }
 
-    # -------- SECONDARY API (flipcartstore) --------
-    try:
-        secondary_url = (
-            "https://flipcartstore.serv00.net/vehicle/api.php"
-            f"?reg={vehicle_no}&key=Tofficial"
-        )
-        s = requests.get(secondary_url, headers=HEADERS, timeout=8)
-
-        try:
-            secondary_response = s.json()
-        except:
-            secondary_response = {
-                "raw_response": s.text,
-                "note": "Secondary API did not return JSON"
-            }
-
-    except Exception as e:
-        secondary_response = {
-            "error": "Secondary API failed",
-            "details": str(e)
-        }
-
-    # -------- CHALLAN API (Cloudflare Worker – USER PROVIDED) --------
-    try:
-        challan_url = (
-            "https://api.b77bf911.workers.dev/vehicle"
-            f"?registration={vehicle_no}"
-        )
-
-        try:
-            c = requests.get(challan_url, headers=HEADERS, timeout=14)
-        except:
-            # retry once after short delay
-            time.sleep(2)
-            c = requests.get(challan_url, headers=HEADERS, timeout=14)
-
-        try:
-            challan_response = c.json()
-        except:
-            challan_response = {
-                "raw_response": c.text,
-                "note": "Challan API did not return JSON"
-            }
-
-    except Exception as e:
-        challan_response = {
-            "error": "Challan API failed",
-            "details": str(e)
-        }
-
-    # -------- FINAL PURE COPY-PASTE RESPONSE --------
     return jsonify({
         "success": True,
-        "query": vehicle_no,
-
-        "primary_api_response": primary_response,
-        "secondary_api_response": secondary_response,
-        "challan_api_response": challan_response,
-
+        "query": reg_no,
+        "vehicle_api_response": vehicle_api_response,
         "Owner": OWNER
     })
