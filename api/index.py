@@ -15,12 +15,10 @@ def handler(request):
 
     data = test1.lower()
 
-    # block spam
     for b in ["@", "http", "https", "www", "salaar"]:
         if b in data:
             return silent()
 
-    # strict pattern
     if not re.match(r"^[A-Z]{2}[0-9]{2}[A-Z][0-9]{4}$", test1, re.I):
         return silent()
 
