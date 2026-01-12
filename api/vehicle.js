@@ -1,24 +1,18 @@
 function cleanText(data) {
   if (typeof data === "string") {
     return data
-      // remove @username
       .replace(/@\w+/g, "")
-      // remove links
       .replace(/https?:\/\/\S+/gi, "")
       .replace(/www\.\S+/gi, "")
       .trim();
   }
 
-  if (Array.isArray(data)) {
-    return data.map(cleanText);
-  }
+  if (Array.isArray(data)) return data.map(cleanText);
 
   if (typeof data === "object" && data !== null) {
-    const cleaned = {};
-    for (const key in data) {
-      cleaned[key] = cleanText(data[key]);
-    }
-    return cleaned;
+    const obj = {};
+    for (const k in data) obj[k] = cleanText(data[k]);
+    return obj;
   }
 
   return data;
@@ -34,45 +28,44 @@ export default async function handler(req, res) {
     });
   }
 
+  /* ================= API 1 ================= */
   try {
-    // ---------- API 1 (Priority) ----------
     const api1Url = `https://new-vehicle-api-eosin.vercel.app/vehicle?rc=${rc}`;
-    const api1Res = await fetch(api1Url);
-    const api1Data = await api1Res.json();
+    const r1 = await fetch(api1Url);
+    const d1 = await r1.json();
 
-    if (
-      api1Data &&
-      api1Data.success !== false &&
-      Object.keys(api1Data).length > 0
-    ) {
+    const validApi1 =
+      d1?.registration_number === rc ||
+      d1?.["Ownership Details"]?.["Owner Name"];
+
+    if (validApi1) {
       return res.status(200).json({
         source: "api_1",
-        data: api1Data
+        data: d1
       });
     }
 
-    throw new Error("API 1 Not Found");
+    throw new Error("API 1 INVALID DATA");
 
-  } catch (err) {
+  } catch (e) {
+    /* ================= API 2 ================= */
     try {
-      // ---------- API 2 (Fallback) ----------
       const api2Url = `https://api.x10.network/numapi.php?action=api&key=thunder&test1=${rc}`;
-      const api2Res = await fetch(api2Url);
-      let api2Data = await api2Res.json();
+      const r2 = await fetch(api2Url);
+      let d2 = await r2.json();
 
-      // clean unwanted text (@ , links, etc)
-      api2Data = cleanText(api2Data);
+      d2 = cleanText(d2);
 
       return res.status(200).json({
         source: "api_2",
-        data: api2Data
+        data: d2
       });
 
-    } catch (e) {
+    } catch (err) {
       return res.status(404).json({
         success: false,
         message: "Data not found in both APIs"
       });
     }
   }
-}
+    }
