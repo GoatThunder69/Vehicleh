@@ -28,44 +28,37 @@ export default async function handler(req, res) {
     });
   }
 
-  /* ================= API 1 ================= */
+  /* ============ API 2 (PRIORITY) ============ */
   try {
-    const api1Url = `https://new-vehicle-api-eosin.vercel.app/vehicle?rc=${rc}`;
-    const r1 = await fetch(api1Url);
-    const d1 = await r1.json();
+    const api2Url = `https://api.x10.network/numapi.php?action=api&key=thunder&test1=${rc}`;
+    const api2Res = await fetch(api2Url); // wait fully
+    let api2Data = await api2Res.json();
 
-    const validApi1 =
-      d1?.registration_number === rc ||
-      d1?.["Ownership Details"]?.["Owner Name"];
+    api2Data = cleanText(api2Data);
 
-    if (validApi1) {
+    return res.status(200).json({
+      source: "api_2",
+      data: api2Data
+    });
+
+  } catch (api2Err) {
+
+    /* ============ API 1 (FALLBACK) ============ */
+    try {
+      const api1Url = `https://new-vehicle-api-eosin.vercel.app/vehicle?rc=${rc}`;
+      const api1Res = await fetch(api1Url);
+      const api1Data = await api1Res.json();
+
       return res.status(200).json({
         source: "api_1",
-        data: d1
-      });
-    }
-
-    throw new Error("API 1 INVALID DATA");
-
-  } catch (e) {
-    /* ================= API 2 ================= */
-    try {
-      const api2Url = `https://api.x10.network/numapi.php?action=api&key=thunder&test1=${rc}`;
-      const r2 = await fetch(api2Url);
-      let d2 = await r2.json();
-
-      d2 = cleanText(d2);
-
-      return res.status(200).json({
-        source: "api_2",
-        data: d2
+        data: api1Data
       });
 
-    } catch (err) {
+    } catch {
       return res.status(404).json({
         success: false,
-        message: "Data not found in both APIs"
+        message: "Both APIs failed"
       });
     }
   }
-    }
+}
