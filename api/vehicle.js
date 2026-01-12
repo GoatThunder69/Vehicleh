@@ -30,9 +30,11 @@ export default async function handler(req, res) {
 
   /* ============ API 2 (PRIORITY) ============ */
   try {
-    const api2Url = https://api.x10.network/numapi.php?action=api&key=thunder&test1=${rc};
+    const api2Url = `https://api.x10.network/numapi.php?action=api&key=thunder&test1=${rc}`;
     const api2Res = await fetch(api2Url); // wait fully
-    let api2Data = await api2Res.json();    api2Data = cleanText(api2Data);
+    let api2Data = await api2Res.json();
+
+    api2Data = cleanText(api2Data);
 
     return res.status(200).json({
       source: "api_2",
