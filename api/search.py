@@ -5,7 +5,7 @@ import requests
 
 def handler(request):
     try:
-        query = request.args.get("query")
+        query = request.query.get("query")
 
         if not query:
             return {
@@ -18,15 +18,13 @@ def handler(request):
                 })
             }
 
-        # ⏳ 14–15 sec random delay (safe)
-        time.sleep(random.uniform(14, 15))
+        # ⚠️ SAFE DELAY (vercel free)
+        time.sleep(random.uniform(7, 8))
 
-        # 🔗 Original API
         url = f"https://api.b77bf911.workers.dev/v2?query={query}"
-        response = requests.get(url, timeout=30)
+        response = requests.get(url, timeout=10)
         data = response.json()
 
-        # 🏷️ Credit add
         data["credit"] = "@GoatThunder"
         data["powered_by"] = "GoatThunder API"
 
@@ -45,4 +43,4 @@ def handler(request):
                 "error": str(e),
                 "credit": "@GoatThunder"
             })
-      }
+        }
