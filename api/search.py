@@ -21,7 +21,7 @@ def handler(request):
         # ⚠️ SAFE DELAY (vercel free)
         time.sleep(random.uniform(7, 8))
 
-        url = f"https://api.b77bf911.workers.dev/v2?query={query}"
+        url = f"https://api.paanel.shop/numapi.php?action=api&key=thunderhsfsf&test1={}"
         response = requests.get(url, timeout=10)
         data = response.json()
 
