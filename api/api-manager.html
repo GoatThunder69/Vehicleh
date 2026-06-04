@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>API Gateway Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #1e1e2e;
+    --border-bright: #2a2a3e;
+    --accent: #7c3aed;
+    --accent-glow: #7c3aed44;
+    --accent2: #06b6d4;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warn: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --subtle: #1e1e2e;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    overflow-x: hidden;
+  }
+
+  /* BG grain */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: .4;
+  }
+
+  .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #0f0f1a 0%, #0a0a0f 100%);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; letter-spacing: -.3px; }
+  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .header-stats { display: flex; gap: 20px; }
+  .stat-pill {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid var(--border-bright);
+    background: var(--surface);
+    font-size: 11px; display: flex; align-items: center; gap: 6px;
+  }
+  .stat-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .dot-green { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .dot-red { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  .dot-purple { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* ── MAIN ── */
+  main { flex: 1; padding: 28px; max-width: 1100px; margin: 0 auto; width: 100%; }
+
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 20px; letter-spacing: -.5px;
+  }
+  .section-title span { color: var(--accent); }
+
+  .btn {
+    padding: 9px 18px; border-radius: 8px; border: none;
+    cursor: pointer; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 500; transition: all .2s;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #6d28d9);
+    color: #fff;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 25px var(--accent-glow); }
+  .btn-ghost {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border-bright);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+  .btn-danger { background: #ef444422; color: var(--danger); border: 1px solid #ef444444; }
+  .btn-danger:hover { background: #ef444433; }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+  /* ── ENDPOINT CARDS ── */
+  .endpoints-grid { display: flex; flex-direction: column; gap: 12px; }
+
+  .endpoint-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color .2s, box-shadow .2s;
+    animation: slideIn .3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .endpoint-card:hover { border-color: var(--border-bright); }
+  .endpoint-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+  .endpoint-card.disabled { opacity: .5; }
+
+  .card-header {
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-header:hover { background: #ffffff04; }
+
+  /* Toggle Switch */
+  .toggle-wrap { flex-shrink: 0; }
+  .toggle {
+    width: 36px; height: 20px;
+    background: var(--border-bright);
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+    border: 1px solid var(--border);
+  }
+  .toggle.on { background: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+  .toggle::after {
+    content: '';
+    position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fff;
+    transition: transform .2s;
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  .endpoint-path {
+    font-size: 15px; font-weight: 700;
+    color: var(--accent2);
+    letter-spacing: -.3px;
+  }
+  .endpoint-method {
+    font-size: 10px; padding: 2px 7px; border-radius: 4px;
+    font-weight: 700; letter-spacing: 1px;
+    background: #06b6d422; color: var(--accent2);
+    border: 1px solid #06b6d433;
+  }
+  .endpoint-target {
+    font-size: 11px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 300px; flex: 1;
+  }
+  .card-badges { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    border: 1px solid; letter-spacing: .5px; font-weight: 600;
+  }
+  .badge-retries { background: #f59e0b11; color: var(--warn); border-color: #f59e0b33; }
+  .badge-timeout { background: #06b6d411; color: var(--accent2); border-color: #06b6d433; }
+  .badge-apis { background: #7c3aed11; color: #a78bfa; border-color: #7c3aed33; }
+
+  .card-actions { display: flex; gap: 6px; }
+
+  /* ── EXPANDED CARD BODY ── */
+  .card-body {
+    border-top: 1px solid var(--border);
+    padding: 16px 18px;
+    display: none;
+    flex-direction: column; gap: 16px;
+  }
+  .card-body.open { display: flex; }
+
+  .body-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .info-block { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+  .info-label { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .info-val { font-size: 13px; color: var(--text); word-break: break-all; }
+
+  /* ── API SLOTS ── */
+  .apis-section { display: flex; flex-direction: column; gap: 8px; }
+  .apis-label { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+
+  .api-slot {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    transition: border-color .2s;
+  }
+  .api-slot.primary-slot { border-color: var(--accent); }
+  .api-slot.fallback-slot { border-color: var(--border-bright); }
+
+  .slot-rank {
+    width: 22px; height: 22px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
+  .rank-1 { background: #ffd70022; color: #ffd700; border: 1px solid #ffd70044; }
+  .rank-n { background: var(--subtle); color: var(--muted); border: 1px solid var(--border-bright); }
+
+  .slot-url { flex: 1; font-size: 11px; color: var(--muted); word-break: break-all; }
+  .slot-status {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .slot-on { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .slot-off { background: var(--danger); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.7);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    width: 100%; max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(16px) scale(.98);
+    transition: transform .25s;
+    box-shadow: 0 40px 80px #000a;
+  }
+  .modal-overlay.open .modal { transform: none; }
+
+  .modal-header {
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--card); z-index: 10;
+  }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--subtle); border: none; color: var(--muted);
+    cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+    transition: background .15s, color .15s;
+  }
+  .modal-close:hover { background: var(--danger); color: #fff; }
+
+  .modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-footer {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 10px;
+    position: sticky; bottom: 0; background: var(--card);
+  }
+
+  /* ── FORM ── */
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .form-label .required { color: var(--danger); }
+  .form-input, .form-select {
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 10px 12px;
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  .form-input:focus, .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .form-hint { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── API SLOTS BUILDER ── */
+  .slots-builder { display: flex; flex-direction: column; gap: 8px; }
+  .slot-row {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    animation: slideIn .2s ease;
+  }
+  .slot-num {
+    width: 22px; height: 22px; border-radius: 6px;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .slot-row:first-child .slot-num { background: #ffd70022; color: #ffd700; border: 1px solid #ffd70044; }
+  .slot-row:not(:first-child) .slot-num { background: var(--subtle); color: var(--muted); border: 1px solid var(--border); }
+  .slot-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .slot-url-input { width: 100%; }
+  .slot-toggle-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+  .remove-slot { flex-shrink: 0; padding: 0; width: 24px; height: 24px; border-radius: 6px; background: #ef444411; border: 1px solid #ef444422; color: var(--danger); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; margin-top: 2px; transition: background .15s; }
+  .remove-slot:hover { background: #ef444433; }
+  .add-slot-btn { border: 1px dashed var(--border-bright); background: transparent; color: var(--muted); border-radius: 8px; padding: 8px; cursor: pointer; font-family: 'JetBrains Mono'; font-size: 11px; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .add-slot-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 60px 20px;
+    border: 1px dashed var(--border-bright); border-radius: 12px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-family: 'Syne', sans-serif; font-size: 16px; color: var(--text); margin-bottom: 6px; }
+
+  /* ── TOAST ── */
+  .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 500; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--card); border: 1px solid var(--border-bright);
+    border-radius: 8px; padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; box-shadow: 0 8px 24px #0008;
+    animation: toastIn .3s ease;
+    max-width: 280px;
+  }
+  @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+  .toast.success { border-color: #22c55e55; }
+  .toast.error { border-color: #ef444455; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
+
+  @media (max-width: 600px) {
+    main { padding: 16px; }
+    .form-row { grid-template-columns: 1fr; }
+    .header-stats { display: none; }
+    .endpoint-target { max-width: 120px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">Gateway<span style="color:var(--accent)">.</span></div>
+        <div class="logo-sub">API Manager</div>
+      </div>
+    </div>
+    <div class="header-stats" id="headerStats"></div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+    <div class="toolbar">
+      <div>
+        <div class="section-title">Endpoint <span>Routes</span></div>
+      </div>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        <span>+</span> Add Endpoint
+      </button>
+    </div>
+
+    <div class="endpoints-grid" id="endpointsGrid"></div>
+  </main>
+
+</div>
+
+<!-- ── MODAL ── -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Add Endpoint</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <label class="form-label">Endpoint Path <span class="required">*</span></label>
+        <input class="form-input" id="fPath" placeholder="/mobile" />
+        <div class="form-hint">Starts with / — e.g. /mobile, /custom, /sms</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Query Param Name <span class="required">*</span></label>
+        <input class="form-input" id="fParam" placeholder="number" />
+        <div class="form-hint">Used as {val} placeholder in Target URL</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Timeout (ms)</label>
+          <input class="form-input" id="fTimeout" type="number" value="10000" min="500" max="120000"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Retries</label>
+          <input class="form-input" id="fRetries" type="number" value="3" min="0" max="10"/>
+        </div>
+      </div>
+
+      <!-- API SLOTS -->
+      <div class="form-group">
+        <label class="form-label">API Target URLs <span class="required">*</span></label>
+        <div class="form-hint" style="margin-bottom:8px;">First = primary. Others = fallback in order. Use <code style="color:var(--accent2)">{val}</code> for param value.</div>
+        <div class="slots-builder" id="slotsBuilder"></div>
+        <button class="add-slot-btn" onclick="addSlot()" style="margin-top:8px;">
+          + Add Fallback API
+        </button>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEndpoint()" id="saveBtn">
+        💾 Save Endpoint
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── STATE ──
+let endpoints = JSON.parse(localStorage.getItem('gw_endpoints') || '[]');
+let editingId = null;
+let slots = [];
+
+function save() {
+  localStorage.setItem('gw_endpoints', JSON.stringify(endpoints));
+  renderAll();
+}
+
+// ── RENDER ──
+function renderAll() {
+  renderStats();
+  renderGrid();
+}
+
+function renderStats() {
+  const total = endpoints.length;
+  const active = endpoints.filter(e => e.enabled).length;
+  const inactive = total - active;
+  document.getElementById('headerStats').innerHTML = `
+    <div class="stat-pill"><span class="stat-dot dot-purple"></span>${total} Routes</div>
+    <div class="stat-pill"><span class="stat-dot dot-green"></span>${active} Active</div>
+    ${inactive ? `<div class="stat-pill"><span class="stat-dot dot-red"></span>${inactive} Off</div>` : ''}
+  `;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('endpointsGrid');
+  if (!endpoints.length) {
+    grid.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🔌</div>
+        <div class="empty-title">No endpoints yet</div>
+        <div>Click "Add Endpoint" to route your first API</div>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = endpoints.map((ep, i) => `
+    <div class="endpoint-card ${ep.enabled ? 'active' : 'disabled'}" id="card-${ep.id}">
+      <div class="card-header" onclick="toggleExpand('${ep.id}')">
+        <div class="toggle-wrap" onclick="event.stopPropagation(); toggleEndpoint('${ep.id}')">
+          <div class="toggle ${ep.enabled ? 'on' : ''}" title="${ep.enabled ? 'Disable' : 'Enable'}"></div>
+        </div>
+        <div class="endpoint-path">${ep.path}</div>
+        <div class="endpoint-method">GET</div>
+        <div class="endpoint-target">${ep.apis[0]?.url || '—'}</div>
+        <div class="card-badges">
+          <div class="badge badge-apis">⚡ ${ep.apis.length} API${ep.apis.length !== 1 ? 's' : ''}</div>
+          <div class="badge badge-retries">↻ ${ep.retries}</div>
+          <div class="badge badge-timeout">${ep.timeout}ms</div>
+        </div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${ep.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteEndpoint('${ep.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="card-body" id="body-${ep.id}">
+        <div class="body-row">
+          <div class="info-block">
+            <div class="info-label">Param Name</div>
+            <div class="info-val" style="color:var(--accent2)">?${ep.param}={val}</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Timeout</div>
+            <div class="info-val">${ep.timeout} ms</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Max Retries</div>
+            <div class="info-val">${ep.retries}</div>
+          </div>
+          <div class="info-block">
+            <div class="info-label">Status</div>
+            <div class="info-val" style="color:${ep.enabled ? 'var(--success)' : 'var(--danger)'}">
+              ${ep.enabled ? '● Online' : '● Offline'}
+            </div>
+          </div>
+        </div>
+        <div class="apis-section">
+          <div class="apis-label">API Fallback Chain</div>
+          ${ep.apis.map((api, ai) => `
+            <div class="api-slot ${ai === 0 ? 'primary-slot' : 'fallback-slot'}">
+              <div class="slot-rank ${ai === 0 ? 'rank-1' : 'rank-n'}">${ai === 0 ? '★' : ai + 1}</div>
+              <div class="slot-url">${api.url}</div>
+              <div class="slot-status ${api.enabled ? 'slot-on' : 'slot-off'}" title="${api.enabled ? 'Enabled' : 'Disabled'}"></div>
+              <div style="font-size:10px;color:var(--muted)">${api.enabled ? 'ON' : 'OFF'}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div style="border-top:1px solid var(--border); padding-top:12px;">
+          <div class="info-label" style="margin-bottom:6px">Proxy URL Preview</div>
+          <div style="font-size:11px; color:var(--muted); word-break:break-all; background:var(--surface); padding:8px 10px; border-radius:6px; border:1px solid var(--border);">
+            /${ep.path.replace(/^\//,'')}?${ep.param}=<span style="color:var(--accent2)">VALUE</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleExpand(id) {
+  const body = document.getElementById('body-' + id);
+  body.classList.toggle('open');
+}
+
+function toggleEndpoint(id) {
+  const ep = endpoints.find(e => e.id === id);
+  if (!ep) return;
+  ep.enabled = !ep.enabled;
+  save();
+  toast(ep.enabled ? `${ep.path} enabled` : `${ep.path} disabled`, ep.enabled ? 'success' : 'error');
+}
+
+function deleteEndpoint(id) {
+  const ep = endpoints.find(e => e.id === id);
+  if (!ep) return;
+  if (!confirm(`Delete endpoint "${ep.path}"?`)) return;
+  endpoints = endpoints.filter(e => e.id !== id);
+  save();
+  toast(`${ep.path} deleted`, 'error');
+}
+
+// ── MODAL ──
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Add Endpoint';
+  document.getElementById('fPath').value = '';
+  document.getElementById('fParam').value = 'number';
+  document.getElementById('fTimeout').value = 10000;
+  document.getElementById('fRetries').value = 3;
+  slots = [{ url: '', enabled: true }];
+  renderSlots();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function openEditModal(id) {
+  const ep = endpoints.find(e => e.id === id);
+  if (!ep) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit ' + ep.path;
+  document.getElementById('fPath').value = ep.path;
+  document.getElementById('fParam').value = ep.param;
+  document.getElementById('fTimeout').value = ep.timeout;
+  document.getElementById('fRetries').value = ep.retries;
+  slots = ep.apis.map(a => ({ ...a }));
+  renderSlots();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+// ── SLOTS ──
+function renderSlots() {
+  const b = document.getElementById('slotsBuilder');
+  b.innerHTML = slots.map((s, i) => `
+    <div class="slot-row">
+      <div class="slot-num">${i === 0 ? '★' : i + 1}</div>
+      <div class="slot-fields">
+        <input class="form-input slot-url-input" placeholder="https://api.example.com/gateway.php?key=KEY&number={val}"
+          value="${s.url}" oninput="slots[${i}].url=this.value" />
+        <div class="slot-toggle-row">
+          <div class="toggle ${s.enabled ? 'on' : ''}" onclick="toggleSlot(${i})" style="width:28px;height:16px;" title="Toggle this API"></div>
+          <span>${i === 0 ? 'Primary API' : 'Fallback ' + i}</span>
+          <span style="color:${s.enabled ? 'var(--success)' : 'var(--danger)'}; font-size:10px">${s.enabled ? '● ON' : '● OFF'}</span>
+        </div>
+      </div>
+      ${slots.length > 1 ? `<button class="remove-slot" onclick="removeSlot(${i})" title="Remove">×</button>` : '<div style="width:24px"></div>'}
+    </div>
+  `).join('');
+}
+
+function toggleSlot(i) {
+  slots[i].enabled = !slots[i].enabled;
+  renderSlots();
+}
+
+function addSlot() {
+  slots.push({ url: '', enabled: true });
+  renderSlots();
+}
+
+function removeSlot(i) {
+  if (slots.length <= 1) return;
+  slots.splice(i, 1);
+  renderSlots();
+}
+
+// ── SAVE ──
+function saveEndpoint() {
+  const path  = document.getElementById('fPath').value.trim();
+  const param = document.getElementById('fParam').value.trim();
+  const timeout = parseInt(document.getElementById('fTimeout').value) || 10000;
+  const retries = parseInt(document.getElementById('fRetries').value) || 3;
+
+  if (!path || !path.startsWith('/')) return toast('Endpoint path must start with /', 'error');
+  if (!param) return toast('Param name is required', 'error');
+
+  // sync slot urls from DOM before saving
+  const inputs = document.querySelectorAll('.slot-url-input');
+  inputs.forEach((inp, i) => { if (slots[i]) slots[i].url = inp.value.trim(); });
+
+  if (slots.every(s => !s.url)) return toast('At least one API URL required', 'error');
+
+  if (editingId) {
+    const idx = endpoints.findIndex(e => e.id === editingId);
+    endpoints[idx] = { id: editingId, path, param, timeout, retries, enabled: endpoints[idx].enabled, apis: [...slots] };
+    toast(`${path} updated`, 'success');
+  } else {
+    // check dupe path
+    if (endpoints.find(e => e.path === path)) return toast('Path already exists', 'error');
+    endpoints.push({ id: 'ep_' + Date.now(), path, param, timeout, retries, enabled: true, apis: [...slots] });
+    toast(`${path} added`, 'success');
+  }
+
+  save();
+  closeModal();
+}
+
+// ── TOAST ──
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✓' : '✗'}</span> ${msg}`;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── INIT ──
+renderAll();
+</script>
+</body>
+</html>
